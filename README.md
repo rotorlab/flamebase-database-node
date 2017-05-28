@@ -1,4 +1,4 @@
-# flamebase-database-node
+# :fire: flamebase-database-node
 
 Real time JSON database server-side. 
 

@@ -107,6 +107,7 @@ function FlamebaseDatabase(database, path) {
             this.fcm = (this.pushConfig.APIKey() === null || this.pushConfig.APIKey() === 0 ? null : new FCM(this.pushConfig.APIKey()));
         }
 
+        this.lastStringReference = JSON.stringify({});
     };
 
     /**
