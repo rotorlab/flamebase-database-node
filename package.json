@@ -1,0 +1,51 @@
+{
+  "author": {
+    "name": "Efra Espada"
+  },
+  "bugs": {
+    "url": "https://github.com/flamebase/flamebase-database-node/issues"
+  },
+  "dependencies": {
+    "fcm-push": "latest",
+    "json-align": "^0.1.0",
+    "log4js": "^1.1.1",
+    "node-json-db": "^0.7.3",
+    "rus-diff": "^1.1.0",
+    "sync-node": ">= 1.3.1"
+  },
+  "description": "json db with real time synchronization with android devices without blocking the main thread",
+  "devDependencies": {},
+  "directories": {},
+  "homepage": "https://github.com/efraespada/flamebase-database-node#readme",
+  "keywords": [
+    "flamebase",
+    "database",
+    "node",
+    "local",
+    "json",
+    "flamebase-database-node",
+    "db",
+    "sync",
+    "node",
+    "nodejs"
+  ],
+  "license": "ISC",
+  "main": "index.js",
+  "maintainers": [
+    {
+      "name": "efraespada",
+      "email": "efraespada@gmail.com"
+    }
+  ],
+  "name": "flamebase-database-node",
+  "optionalDependencies": {},
+  "readme": "ERROR: No README data found!",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/flamebase/flamebase-database-node.git"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "version": "1.0.0"
+}
