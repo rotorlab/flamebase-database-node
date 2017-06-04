@@ -204,27 +204,31 @@ function FlamebaseDatabase(database, path) {
 
     this.sendPushMessage = function(send) {
         this.queue.pushJob(function() {
-            var message = {
-                registration_ids: send.tokens, // required fill with device token or topics
-                data: send.data,
-                notification: send.notification
-            };
+            return new Promise(function (resolve, reject) {
+                var message = {
+                    registration_ids: send.tokens, // required fill with device token or topics
+                    data: send.data,
+                    notification: send.notification
+                };
 
-            if (object.debugVal) {
-                logger.debug("Sending to: " + JSON.stringifyAligned(message.registration_ids));
-            }
 
-            object.fcm.send(message)
-                .then(function(response){
-                    if (object.debugVal) {
-                        logger.debug("Successfully sent with response: " + JSON.stringifyAligned(JSON.parse(response)));
+                if (object.debugVal) {
+                    logger.debug("Sending to: " + JSON.stringifyAligned(message.registration_ids));
+                }
+
+                object.fcm.send(message)
+                    .then(function (response) {
+                        if (object.debugVal) {
+                            logger.debug("Successfully sent with response: " + JSON.stringifyAligned(JSON.parse(response)));
+                        }
                         resolve();
-                    }
-                })
-                .catch(function(err){
-                    logger.error("error: " + JSON.stringifyAligned(err));
-                    resolve();
-                })
+                    })
+                    .catch(function (err) {
+                        logger.error("error: " + JSON.stringifyAligned(err));
+                        resolve();
+                    })
+
+            });
         });
     };
 
