@@ -13,7 +13,7 @@ var FlamebaseDatabase = require("flamebase-database-node");
 ```javascript
 var database    = "chats";      // database's name
 var path        = "groupA";    // path to JSON reference
-var FD          = new FlamebaseDatabase(database, path);
+var FD          = new FlamebaseDatabase(database, "/" + path);
 FD.syncFromDatabase();          // first load
 ```
 Now `FD.ref` is `groupA` JSON object.
