@@ -16,7 +16,7 @@
   "description": "json db with real time synchronization with android devices without blocking the main thread",
   "devDependencies": {},
   "directories": {},
-  "homepage": "https://github.com/efraespada/flamebase-database-node#readme",
+  "homepage": "https://github.com/flamebase/flamebase-database-node#readme",
   "keywords": [
     "flamebase",
     "database",

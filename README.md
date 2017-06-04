@@ -1,6 +1,6 @@
 # :fire: flamebase-database-node
 
-Real time JSON database. Database 
+Real time JSON database.
 
 ### Usage
 
