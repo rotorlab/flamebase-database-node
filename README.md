@@ -1,112 +1,131 @@
-# flamebase-database-node
+# :fire: flamebase-database-node
 
-Real time JSON database server-side. 
+Real time JSON database. Database 
 
 ### Usage
 
+- Import library:
+
 ```javascript
 var FlamebaseDatabase = require("flamebase-database-node");
+```
+- Define database and reference to instance as JSON object: 
+```javascript
+var database    = "chats";      // database's name
+var path        = "groupA";    // path to JSON reference
+var FD          = new FlamebaseDatabase(database, path);
+FD.syncFromDatabase();          // first load
+```
+Now `FD.ref` is `groupA` JSON object.
 
-var database    = "myDatabase"; // name of db
-var path        = "cars/";      // path to JSON reference
-
-/**
-* db reference
-*/
-var FD      = new FlamebaseDatabase(database, path);
-var queue   = FD.getQueue();
-
-/**
-* load JSON reference on FD.ref
-*/
-FD.syncFromDatabase();
-
-var object = this;
-
-/**
-* devices to keep up to date
-*/
-var devices = [];
-
-var deviceA = {};
-deviceA.token = "TOKEN_DEVICE_A";
-deviceA.os = FC.OS.ANDROID;
-
-devices.push(deviceA);
-
-
-// ################ ios lib not ready yet
-var deviceB = {};
-deviceB.token = "TOKEN_DEVICE_B";
-deviceB.os = FC.OS.IOS;
-
-devices.push(deviceB);
-
-/**
-* config db synchronization
-*/
-this.setConfig = function() {
-    
-    /**
-    * config for db synchronization (server - client)
-    * @type {{}}
-    */
-    var config = {};
-    
-    /**
-    * server notification key
-    */
-    config.APIKey = function() {
-        return "YOUR_FCM_PUSH_KEY"; // server key - FCM
-    };
-    
-    /**
-    * devices to keep up to date
-    */
-    config.devices = function() {
-        return devices;
-    };
-
-    /**
-    * custom tag for sync
-    * - used in android client
-    */
-    config.tag = function() {
-        return "user_sync";
-    };
-
-    /**
-    * custom id for database reference
-    * - used in android client
-    */
-    config.referenceId = function() {
-        return "CUSTOM_ID";
-    };
-
-    /**
-    * custom notification info to send when database reference changes.
-    * set null if not needed
-    *     
-    * - used in android client
-    * 
-    * config.notification = null;
-    */
-    config.notification = function() {
-        return {
-            type: "custom_type",
-            name: object.FD.ref.name,
-            image: object.FD.ref.photoURL
+- Do some work and sync:
+This JSON reference (`groupA`) contains this information:
+```json
+{
+    "people": {
+        "john_travolta@ddd.com": {
+            "name": "John Travolta",
+            "token": "AsDadfsdfsDFCGsdfgEgWEcgcEgcwEgWegwEgeGWHTrydhdfsDFCGsdfgEgWEcgcEgcwEgWegwEgrty",
+            "os": "android"
+        },
+        "donal_duck@aaa.com": {
+            "name": "Donal Duck",
+            "token": "DSfgsfgSgrtuyjYuIKyUyjRtyFytrydhdfsDFCGsdfgEgWEcgcEfgSgrtuyjYuIgcwEgWegwEgrty",
+            "os": "android"
         }
-    };
+    },
+    "messages": {
+        "1495171941114": {
+            "author": "john_travolta@ddd.com",
+            "text": "Message 1"
+        },
+        "1495171941127": {
+            "author": "donal_duck@aaa.com",
+            "text": "Message 2"
+        },
+        "1495171941159": {
+            "author": "john_travolta@ddd.com",
+            "text": "Message 3"
+        },
+        "1495171941327": {
+            "author": "donal_duck@aaa.com",
+            "text": "Message 4"
+        }
+    }
+}
+```
+For insert new messages on this conversation compose a new message JSON object:
+```javascript
+var message = {};
+message.author = "john_travolta@ddd.com";
+message.text = "Message 5";
 
-    /**
-    * sync config
-    */
-    FD.setSyncConfig(config);
-    
-    /**
-    * enable debug logs
-    */
-    FD.debug(true);
+var messageId = new Date().getTime().toString();
+ 
+FD.ref.messages[messageId] = message;
+
+FD.syncToDatabase();
+```
+At this point we have a JSON reference synchronized with our JSON database.
+Define some configuration properties to keep devices up to date when JSON reference changes.
+```javascript
+var config = {};
+
+/** 
+* server API key for firebase cloud messaging
+*/
+config.APIKey = function() {
+    return "GsdfgSVDfvsdAwejhFDGhbdASD"; // server key - FCM
 };
+
+/** 
+* all device objects must have token and os info in order
+* to slice big JSON changes for android or ios push notifications
+*/
+config.devices = function() {
+    var devices = [];
+    var keys = Object.keys(FD.ref.people);
+    for (var i = 0; i < people.length; i++) {
+        var person = FD.ref.people[keys[i]];
+        
+        var device = {};
+        device.token = person.token;
+        device.os = person.os;
+        
+        devices.push(device);
+    }
+    return devices;
+};
+
+/** 
+* tag that informs android/ios client which action is being called
+*/
+config.tag = function() {
+    return path + "_sync"; // groupA_sync
+};
+
+/**
+* custom id for client database (used as primary key)
+*/
+config.referenceId = function() {
+    return path; // groupA
+};
+
+/**
+* custom notification to send when database reference changes.
+* return null if not needed
+*/
+config.notification = function() {
+    return {
+        type: path + "_type",           // notification type
+        name: "Database changed",       // name or text message
+        image: "http://..."             // image url to show on left notification icon
+    }
+};
+
+FD.setSyncConfig(config);
+```
+- Enable debug logs:
+```javascript
+FD.debug(true);
 ```
