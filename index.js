@@ -1,9 +1,9 @@
 
-var SN = require('sync-node');
 var JsonDB = require('node-json-db');
 var FCM = require('fcm-push');
 var diff = require('rus-diff').diff;
 var log4js = require('log4js');
+var SN = require('sync-node');
 
 const TAG = "Flamebase Database";
 var logger = log4js.getLogger(TAG);
@@ -30,9 +30,8 @@ function FlamebaseDatabase(database, path) {
     this.lengthLimit = {};
     this.lengthLimit.ANDROID = (4096 - lengthMargin);
     this.lengthLimit.IOS = (2048 - lengthMargin);
-
-    // sync queue
     this.queue = SN.createQueue();
+
 
     // database
     this.db = new JsonDB(database, true, true);
@@ -45,54 +44,28 @@ function FlamebaseDatabase(database, path) {
     this.pushConfig = null;
     this.fcm = null;
 
-    //db sync status
-    this.synchronizingToDatabase = false;    // sync data towards db
-    this.synchronizingFromDatabase = false;  // sync data  from   db
-
     /**
      * sync from database
      */
     this.syncFromDatabase = function() {
-        this.queue.pushJob(function(){
-            return new Promise(function (resolve, reject) {
-                object.synchronizingFromDatabase = true;
-                try {
-                    console.log("####################### data path: " + path);
-                    object.ref = object.db.getData(path);
-                    object.synchronizingFromDatabase = false;
-                    object.syncNotifications();
-                    resolve()
-                } catch(e) {
-                    console.log("####################### data error: " + e);
-                    object.db.delete(path);
-                    object.ref = {};
-                    object.synchronizingFromDatabase = false;
-                    resolve();
-                }
-            })
-        });
+        try {
+            console.log("####################### data path: " + path);
+            object.ref = object.db.getData(path);
+            object.syncNotifications();
+        } catch(e) {
+            console.log("####################### data error: " + e);
+            console.log("####################### deleting:  " + path);
+            object.db.delete(path);
+            object.ref = {};
+        }
     };
 
     /**
      * sync to database
      */
     this.syncToDatabase = function() {
-        this.queue.pushJob(function(){
-            return new Promise(function (resolve, reject) {
-                object.synchronizingToDatabase = true;
-                try {
-                    object.db.push(path, object.ref);
-                    object.synchronizingToDatabase = false;
-                    object.syncNotifications();
-                    resolve()
-                } catch(e) {
-                    console.log("####################### data error : " + e);
-                    object.synchronizingToDatabase = false;
-                    resolve();
-                }
-                // if (debug) console.info(TAG + " to: " + JSON.stringify(object.ref))
-            })
-        });
+        object.db.push(path, object.ref);
+        object.syncNotifications();
     };
 
     /**
@@ -230,30 +203,28 @@ function FlamebaseDatabase(database, path) {
     };
 
     this.sendPushMessage = function(send) {
-        this.queue.pushJob(function(){
-            return new Promise(function (resolve, reject) {
-                var message = {
-                    registration_ids: send.tokens, // required fill with device token or topics
-                    data: send.data,
-                    notification: send.notification
-                };
+        this.queue.pushJob(function() {
+            var message = {
+                registration_ids: send.tokens, // required fill with device token or topics
+                data: send.data,
+                notification: send.notification
+            };
 
-                if (object.debugVal) {
-                    logger.debug("Sending to: " + JSON.stringifyAligned(message.registration_ids));
-                }
+            if (object.debugVal) {
+                logger.debug("Sending to: " + JSON.stringifyAligned(message.registration_ids));
+            }
 
-                object.fcm.send(message)
-                    .then(function(response){
-                        if (object.debugVal) {
-                            logger.debug("Successfully sent with response: " + JSON.stringifyAligned(JSON.parse(response)));
-                        }
+            object.fcm.send(message)
+                .then(function(response){
+                    if (object.debugVal) {
+                        logger.debug("Successfully sent with response: " + JSON.stringifyAligned(JSON.parse(response)));
                         resolve();
-                    })
-                    .catch(function(err){
-                        logger.error("error: " + JSON.stringifyAligned(err));
-                        resolve();
-                    })
-            })
+                    }
+                })
+                .catch(function(err){
+                    logger.error("error: " + JSON.stringifyAligned(err));
+                    resolve();
+                })
         });
     };
 
@@ -281,14 +252,6 @@ function FlamebaseDatabase(database, path) {
         var result = {};
         result.parts = partsToSend;
         return result;
-    };
-
-    this.getQueue = function() {
-        return this.queue
-    };
-
-    this.isSynchronizing = function() {
-        return this.synchronizingToDatabase || this.synchronizingFromDatabase
     };
 
     this.exist = function() {
