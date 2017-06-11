@@ -55,7 +55,11 @@ function FlamebaseDatabase(database, path) {
         } catch(e) {
             console.log("####################### data error: " + e);
             console.log("####################### deleting:  " + path);
-            object.db.delete(path);
+            try {
+                object.db.delete(path);
+            } catch (e) {
+
+            }
             object.ref = {};
         }
     };
