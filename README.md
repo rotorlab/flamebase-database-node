@@ -60,7 +60,7 @@ var message = {};
 message.author = "john_travolta@ddd.com";
 message.text = "Message 5";
 
-var messageId = new Date().getTime().toString();
+var messageId = new Date().getTime() + "";
  
 FD.ref.messages[messageId] = message;
 
@@ -124,6 +124,12 @@ config.notification = function() {
 };
 
 FD.setSyncConfig(config);
+```
+Now all reference changes are sent every time you call `FD.syncToDatabase()`. It only sends changes.
+
+For sending full reference:
+```
+FD.syncToDatabase(true);
 ```
 - Enable debug logs:
 ```javascript
