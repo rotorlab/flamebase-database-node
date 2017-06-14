@@ -128,7 +128,7 @@ FD.setSyncConfig(config);
 Now all reference changes are sent every time you call `FD.syncToDatabase()`. It only sends changes.
 
 For sending full reference:
-```
+```javascript
 FD.syncToDatabase(true);
 ```
 - Enable debug logs:
