@@ -53,13 +53,16 @@ function FlamebaseDatabase(database, path) {
             object.ref = object.db.getData(path);
             object.syncNotifications();
         } catch(e) {
-            console.log("####################### data error: " + e);
-            console.log("####################### deleting:  " + path);
+            console.log("####################### not found, generating {} ");
+            // object.createEmptyReferenceForPath(e, path);
+
+            /*
             try {
+                // console.log("####################### deleting:  " + path);
                 object.db.delete(path);
             } catch (e) {
 
-            }
+            }*/
             object.ref = {};
         }
     };
@@ -67,7 +70,13 @@ function FlamebaseDatabase(database, path) {
     /**
      * sync to database
      */
-    this.syncToDatabase = function() {
+    this.syncToDatabase = function(restart) {
+        if (restart !== undefined && restart) {
+            this.lastStringReference = JSON.stringify({});
+            if (this.debugVal) {
+                logger.debug("cleaning last reference on " + path);
+            }
+        }
         object.db.push(path, object.ref);
         object.syncNotifications();
     };
@@ -261,6 +270,44 @@ function FlamebaseDatabase(database, path) {
         result.parts = partsToSend;
         return result;
     };
+
+    /*this.createEmptyReferenceForPath = function(e, path) {
+        var aux = null;
+        if (e.toString().indexOf("Can't find dataPath") > -1) {
+
+            var mainRef = object.db.getData("/");
+            var pathParts = path.split("/");
+
+            for (var p = 0; p < pathParts.length; p++) {
+                var pa = pathParts[p];
+
+                if (pa.length === 0) {
+                    continue;
+                }
+
+                if (aux === null) {
+                    if (mainRef[pa] !== undefined) {
+                        aux = mainRef[pa];
+                    } else {
+                        mainRef[pa] = {};
+                        aux = mainRef[pa]
+                    }
+                } else {
+                    if (aux[pa] !== undefined) {
+                        aux = aux[pa];
+                    } else {
+                        aux[pa] = {};
+                        aux = aux[pa]
+                    }
+                }
+            }
+
+            logger.debug("generated: " + JSON.stringifyAligned(mainRef));
+
+            object.ref = mainRef;
+            object.db.push("/", mainRef);
+        }
+    };*/
 
     this.exist = function() {
         return !(this.ref === null || this.ref === undefined)
