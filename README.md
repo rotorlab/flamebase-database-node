@@ -1,3 +1,4 @@
+[ ![flamebase/flamebase-database-node](https://d25lcipzij17d.cloudfront.net/badge.svg?id=js&type=6&v=1.1.0&x2=0)](https://www.npmjs.com/package/flamebase-database-node)
 # :fire: flamebase-database-node
 
 Real time JSON database (server node).
