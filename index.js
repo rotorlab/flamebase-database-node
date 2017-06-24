@@ -49,8 +49,14 @@ function FlamebaseDatabase(database, path) {
      */
     this.syncFromDatabase = function() {
         try {
-            console.log("####################### data path: " + path);
+            if (this.debugVal) {
+                logger.debug("####################### data path: " + path);
+            }
             object.ref = object.db.getData(path);
+            this.lastStringReference = JSON.stringify(object.ref);
+            if (this.debugVal) {
+                logger.debug("####################### ref: " + JSON.stringify(object.ref));
+            }
             object.syncNotifications();
         } catch(e) {
             console.log("####################### not found, generating {} ");
@@ -179,6 +185,8 @@ function FlamebaseDatabase(database, path) {
                     sen.notification = notification;
                     this.sendPushMessage(sen);
                 }
+            } else if (this.debugVal) {
+                logger.debug("no differences located");
             }
         }
 
@@ -211,6 +219,8 @@ function FlamebaseDatabase(database, path) {
                     s.notification = notification;
                     this.sendPushMessage(s);
                 }
+            } else if (this.debugVal) {
+                logger.debug("no differences located");
             }
         }
     };
@@ -250,20 +260,36 @@ function FlamebaseDatabase(database, path) {
         var notificationLength = JSON.stringify(notification).length;
 
         var differences = JSON.stringify(diff(JSON.parse(this.lastStringReference), this.ref));
-        differences = this.string2Hex(differences);
         var partsToSend = [];
-        var limit = os.indexOf(this.OS.IOS) !== -1 ? this.lengthLimit.IOS - notificationLength : this.lengthLimit.ANDROID - notificationLength;
-        if (differences.length > limit) {
-            var index = -1;
-            var pendingChars = differences.length;
-            while (pendingChars > 0) {
-                index++;
-                var part = differences.slice(index * limit, (pendingChars < limit ? index * limit + pendingChars : (index + 1) * limit));
-                pendingChars = pendingChars - part.length;
-                partsToSend.push(part);
+
+        if (this.debugVal) {
+            logger.debug("diff: " + differences);
+        }
+
+        if (differences === "false") {
+            var currentStringRef = JSON.stringify(this.ref);
+            if (this.lastStringReference.length != currentStringRef.length) {
+                logger.error("something went wrong; chars diff: " + (this.lastStringReference.length - currentStringRef.length));
+            }
+            if (this.debugVal) {
+                logger.debug("no differences");
             }
         } else {
-            partsToSend.push(differences);
+            differences = this.string2Hex(differences);
+
+            var limit = os.indexOf(this.OS.IOS) !== -1 ? this.lengthLimit.IOS - notificationLength : this.lengthLimit.ANDROID - notificationLength;
+            if (differences.length > limit) {
+                var index = -1;
+                var pendingChars = differences.length;
+                while (pendingChars > 0) {
+                    index++;
+                    var part = differences.slice(index * limit, (pendingChars < limit ? index * limit + pendingChars : (index + 1) * limit));
+                    pendingChars = pendingChars - part.length;
+                    partsToSend.push(part);
+                }
+            } else {
+                partsToSend.push(differences);
+            }
         }
 
         var result = {};
