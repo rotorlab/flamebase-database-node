@@ -1,9 +1,11 @@
 
-var JsonDB = require('node-json-db');
-var FCM = require('fcm-push');
-var diff = require('rus-diff').diff;
-var log4js = require('log4js');
-var SN = require('sync-node');
+var JsonDB =                require('node-json-db');
+var FCM =                   require('fcm-push');
+var diff =                  require('rus-diff').diff;
+var log4js =                require('log4js');
+var SN =                    require('sync-node');
+var sha1 =                  require('sha1');
+
 
 const TAG = "Flamebase Database";
 var logger = log4js.getLogger(TAG);
@@ -12,6 +14,7 @@ JSON.stringifyAligned = require('json-align');
 
 var ACTION_SIMPLE_UPDATE    = "simple_update";
 var ACTION_SLICE_UPDATE     = "slice_update";
+var ACTION_NO_UPDATE        = "no_update";
 
 function FlamebaseDatabase(database, path) {
 
@@ -49,8 +52,14 @@ function FlamebaseDatabase(database, path) {
      */
     this.syncFromDatabase = function() {
         try {
-            console.log("####################### data path: " + path);
+            if (this.debugVal) {
+                logger.debug("####################### data path: " + path);
+            }
             object.ref = object.db.getData(path);
+            this.lastStringReference = JSON.stringify(object.ref);
+            if (this.debugVal) {
+                logger.debug("####################### ref: " + JSON.stringify(object.ref));
+            }
             object.syncNotifications();
         } catch(e) {
             console.log("####################### not found, generating {} ");
@@ -138,8 +147,8 @@ function FlamebaseDatabase(database, path) {
             }
         }
 
-        var data_android = this.getPartsFor(this.OS.ANDROID);
-        var data_ios = this.getPartsFor(this.OS.IOS);
+        var data_android = this.getPartsFor(this.OS.ANDROID, JSON.parse(this.lastStringReference), this.ref);
+        var data_ios = this.getPartsFor(this.OS.IOS, JSON.parse(this.lastStringReference), this.ref);
 
         if (object.debugVal) {
             logger.debug("android_tokens_size: " + android_tokens.length);
@@ -179,6 +188,8 @@ function FlamebaseDatabase(database, path) {
                     sen.notification = notification;
                     this.sendPushMessage(sen);
                 }
+            } else if (this.debugVal) {
+                logger.debug("no differences located");
             }
         }
 
@@ -211,6 +222,119 @@ function FlamebaseDatabase(database, path) {
                     s.notification = notification;
                     this.sendPushMessage(s);
                 }
+            } else if (this.debugVal) {
+                logger.debug("no differences located");
+            }
+        }
+    };
+
+    this.sendDifferencesForClient = function(before, device) {
+
+        var ios_tokens = [];
+        var android_tokens = [];
+
+        var id = this.pushConfig.referenceId();
+        var notification = this.pushConfig.notification();
+
+        if (device.os.indexOf(this.OS.IOS) !== -1) {
+            ios_tokens.push(device.token);
+        } else {
+            android_tokens.push(device.token);
+        }
+
+        var data_android = this.getPartsFor(this.OS.ANDROID, JSON.parse(before), this.ref);
+        var data_ios = this.getPartsFor(this.OS.IOS, JSON.parse(before), this.ref);
+
+        if (object.debugVal) {
+            logger.debug("android_tokens_size: " + android_tokens.length);
+            logger.debug("ios_tokens_size: " + ios_tokens.length);
+            logger.debug("data_android_size: " + data_android.parts.length);
+            logger.debug("data_ios_size: " + data_ios.parts.length);
+        }
+
+        this.lastStringReference = JSON.stringify(this.ref);
+
+        if (android_tokens.length > 0) {
+            if (data_android.parts.length === 1) {
+                var data = {};
+                data.id = id;
+                data.tag = this.pushConfig.tag();
+                data.reference = data_android.parts[0];
+                data.action = ACTION_SIMPLE_UPDATE;
+                data.size = data_android.parts.length;
+                data.index = 0;
+                var send = {};
+                send.data = data;
+                send.tokens = android_tokens;
+                send.notification = notification;
+                this.sendPushMessage(send);
+            } else if (data_android.parts.length > 1) {
+                for (var i = 0; i < data_android.parts.length; i++) {
+                    var dat = {};
+                    dat.id = id;
+                    dat.tag = this.pushConfig.tag();
+                    dat.reference = data_android.parts[i];
+                    dat.action = ACTION_SLICE_UPDATE;
+                    dat.index = i;
+                    dat.size = data_android.parts.length;
+                    var sen = {};
+                    sen.data = dat;
+                    sen.tokens = android_tokens;
+                    sen.notification = notification;
+                    this.sendPushMessage(sen);
+                }
+            } else {
+                var data = {};
+                data.id = id;
+                data.tag = this.pushConfig.tag();
+                data.action = ACTION_NO_UPDATE;
+                var send = {};
+                send.data = data;
+                send.tokens = android_tokens;
+                send.notification = notification;
+                this.sendPushMessage(send);
+            }
+        }
+
+        if (ios_tokens.length > 0) {
+            if (data_ios.parts.length === 1) {
+                var da = {};
+                da.id = id;
+                da.tag = this.pushConfig.tag();
+                da.reference = data_ios.parts[0];
+                da.action = ACTION_SIMPLE_UPDATE;
+                da.size = data_ios.parts.length;
+                da.index = 0;
+                var se = {};
+                se.data = da;
+                se.tokens = ios_tokens;
+                se.notification = notification;
+                this.sendPushMessage(se);
+            } else if (data_ios.parts.length > 1) {
+                for (var i = 0; i < data_ios.parts.length; i++) {
+                    var d = {};
+                    d.id = id;
+                    d.tag = this.pushConfig.tag();
+                    d.reference = data_ios.parts[i];
+                    d.action = ACTION_SLICE_UPDATE;
+                    d.index = i;
+                    d.size = data_ios.parts.length;
+                    var s = {};
+                    s.data = d;
+                    s.tokens = ios_tokens;
+                    s.notification = notification;
+                    this.sendPushMessage(s);
+                }
+            } else {
+                var data = {};
+                data.id = id;
+                data.tag = this.pushConfig.tag();
+                data.action = ACTION_NO_UPDATE;
+                var send = {};
+                send.data = data;
+                send.tokens = ios_tokens;
+                send.notification = notification;
+                this.sendPushMessage(send);
             }
         }
     };
@@ -245,25 +369,43 @@ function FlamebaseDatabase(database, path) {
         });
     };
 
-    this.getPartsFor = function(os) {
+    this.getPartsFor = function(os, before, after) {
         var notification = this.pushConfig.notification();
         var notificationLength = JSON.stringify(notification).length;
 
-        var differences = JSON.stringify(diff(JSON.parse(this.lastStringReference), this.ref));
-        differences = this.string2Hex(differences);
+        //var differences = JSON.stringify(diff(JSON.parse(this.lastStringReference), this.ref));
+        var differences = JSON.stringify(diff(before, after));
         var partsToSend = [];
-        var limit = os.indexOf(this.OS.IOS) !== -1 ? this.lengthLimit.IOS - notificationLength : this.lengthLimit.ANDROID - notificationLength;
-        if (differences.length > limit) {
-            var index = -1;
-            var pendingChars = differences.length;
-            while (pendingChars > 0) {
-                index++;
-                var part = differences.slice(index * limit, (pendingChars < limit ? index * limit + pendingChars : (index + 1) * limit));
-                pendingChars = pendingChars - part.length;
-                partsToSend.push(part);
+
+        if (this.debugVal) {
+            logger.debug("diff: " + differences);
+        }
+
+        if (differences === "false") {
+            var currentStringAfter = JSON.stringify(after);
+            var currentStringBefore = JSON.stringify(before);
+            if (currentStringBefore.length !== currentStringAfter.length) {
+                logger.error("something went wrong; sha1 diff: " + currentStringBefore.length + " - " + currentStringAfter.length);
+            }
+            if (this.debugVal) {
+                logger.debug("no differences");
             }
         } else {
-            partsToSend.push(differences);
+            differences = this.string2Hex(differences);
+
+            var limit = os.indexOf(this.OS.IOS) !== -1 ? this.lengthLimit.IOS - notificationLength : this.lengthLimit.ANDROID - notificationLength;
+            if (differences.length > limit) {
+                var index = -1;
+                var pendingChars = differences.length;
+                while (pendingChars > 0) {
+                    index++;
+                    var part = differences.slice(index * limit, (pendingChars < limit ? index * limit + pendingChars : (index + 1) * limit));
+                    pendingChars = pendingChars - part.length;
+                    partsToSend.push(part);
+                }
+            } else {
+                partsToSend.push(differences);
+            }
         }
 
         var result = {};

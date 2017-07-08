@@ -1,7 +1,14 @@
-[ ![flamebase/flamebase-database-node](https://d25lcipzij17d.cloudfront.net/badge.svg?id=js&type=6&v=1.1.0&x2=0)](https://www.npmjs.com/package/flamebase-database-node)
+[ ![flamebase/flamebase-database-node](https://d25lcipzij17d.cloudfront.net/badge.svg?id=js&type=6&v=1.2.0&x2=0)](https://www.npmjs.com/package/flamebase-database-node)
 # :fire: flamebase-database-node
 
 Real time JSON database (server node).
+
+### What is this?
+Flamebase is an open source project that tries to emulate Firebase Database features as much as possible. I like Firebase but it's expensive for what it currently offers.
+If you are doing an altruist project with Firebase, pray not to became successful, because the monthly amount will increase considerably.
+
+In this repo you can find the proper package for work with json db as flamebase-database-server-cluster does.
+For now it still developing, so please be patient with errors.
 
 ### Usage
 
@@ -68,6 +75,7 @@ FD.ref.messages[messageId] = message;
 FD.syncToDatabase();
 ```
 At this point we have a JSON reference synchronized with our JSON database.
+
 Define some configuration properties to keep devices up to date when JSON reference changes.
 ```javascript
 var config = {};
