@@ -1,4 +1,4 @@
-[ ![flamebase/flamebase-database-node](https://d25lcipzij17d.cloudfront.net/badge.svg?id=js&type=6&v=1.2.0&x2=0)](https://www.npmjs.com/package/flamebase-database-node)
+[ ![flamebase/flamebase-database-node](https://d25lcipzij17d.cloudfront.net/badge.svg?id=js&type=6&v=1.3.0&x2=0)](https://www.npmjs.com/package/flamebase-database-node)
 # :fire: flamebase-database-node
 
 Real time JSON database (server node).
@@ -139,6 +139,13 @@ Now all reference changes are sent every time you call `FD.syncToDatabase()`. It
 For sending full reference:
 ```javascript
 FD.syncToDatabase(true);
+```
+Control synchronization process:
+```javascript
+FD.syncToDatabase(false, function() {
+    // data is stored and all push messages has been sent
+    console.log("data stored and differences sent!")
+});
 ```
 - Enable debug logs:
 ```javascript
