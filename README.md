@@ -140,6 +140,13 @@ For sending full reference:
 ```javascript
 FD.syncToDatabase(true);
 ```
+Control synchronization process:
+```javascript
+FD.syncToDatabase(false, function() {
+    // data is stored and all push messages has been sent
+    console.log("data stored and differences sent!")
+});
+```
 - Enable debug logs:
 ```javascript
 FD.debug(true);
