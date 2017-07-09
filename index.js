@@ -52,34 +52,24 @@ function FlamebaseDatabase(database, path) {
      */
     this.syncFromDatabase = function() {
         try {
-            if (this.debugVal) {
-                logger.debug("####################### data path: " + path);
-            }
             object.ref = object.db.getData(path);
             this.lastStringReference = JSON.stringify(object.ref);
             if (this.debugVal) {
-                logger.debug("####################### ref: " + JSON.stringify(object.ref));
+                logger.debug("ref: " + path);
+                logger.debug("len: " + this.lastStringReference.length);
             }
-            object.syncNotifications();
         } catch(e) {
-            console.log("####################### not found, generating {} ");
-            // object.createEmptyReferenceForPath(e, path);
-
-            /*
-            try {
-                // console.log("####################### deleting:  " + path);
-                object.db.delete(path);
-            } catch (e) {
-
-            }*/
+            console.log("####################### error: " + e);
+            console.log("####################### generating {} ");
             object.ref = {};
+            this.lastStringReference = JSON.stringify(object.ref);
         }
     };
 
     /**
      * sync to database
      */
-    this.syncToDatabase = function(restart) {
+    this.syncToDatabase = function(restart, callback) {
         if (restart !== undefined && restart) {
             this.lastStringReference = JSON.stringify({});
             if (this.debugVal) {
@@ -87,7 +77,7 @@ function FlamebaseDatabase(database, path) {
             }
         }
         object.db.push(path, object.ref);
-        object.syncNotifications();
+        object.syncNotifications(callback);
     };
 
     /**
@@ -116,10 +106,10 @@ function FlamebaseDatabase(database, path) {
     /**
      * fired if fcm is defined and DB changes or reloads
      */
-    this.syncNotifications = function() {
-        if (this.pushConfig !== null && this.fcm !== null) {
+    this.syncNotifications = function(callback) {
+        if (this.pushConfig !== null) {
             try {
-                this.sendDetailPushMessage();
+                this.sendDetailPushMessage(callback);
             } catch (e) {
                 logger.error("error: " + e);
             }
@@ -129,7 +119,11 @@ function FlamebaseDatabase(database, path) {
     /**
      *
      */
-    this.sendDetailPushMessage = function() {
+    this.sendDetailPushMessage = function(callback) {
+        if (this.fcm === null) {
+            logger.error("# no fcm detected, set an API key")
+            return;
+        }
 
         var ios_tokens = [];
         var android_tokens = [];
@@ -147,19 +141,14 @@ function FlamebaseDatabase(database, path) {
             }
         }
 
-        var data_android = this.getPartsFor(this.OS.ANDROID, JSON.parse(this.lastStringReference), this.ref);
-        var data_ios = this.getPartsFor(this.OS.IOS, JSON.parse(this.lastStringReference), this.ref);
-
-        if (object.debugVal) {
-            logger.debug("android_tokens_size: " + android_tokens.length);
-            logger.debug("ios_tokens_size: " + ios_tokens.length);
-            logger.debug("data_android_size: " + data_android.parts.length);
-            logger.debug("data_ios_size: " + data_ios.parts.length);
-        }
-
         this.lastStringReference = JSON.stringify(this.ref);
 
         if (android_tokens.length > 0) {
+            var data_android = this.getPartsFor(this.OS.ANDROID, JSON.parse(this.lastStringReference), this.ref);
+            if (object.debugVal) {
+                logger.debug("android_tokens_size: " + android_tokens.length);
+                logger.debug("data_android_size: " + data_android.parts.length);
+            }
             if (data_android.parts.length === 1) {
                 var data = {};
                 data.id = id;
@@ -172,7 +161,11 @@ function FlamebaseDatabase(database, path) {
                 send.data = data;
                 send.tokens = android_tokens;
                 send.notification = notification;
-                this.sendPushMessage(send);
+                if (ios_tokens.length === 0) {
+                    this.sendPushMessage(send, callback);
+                } else {
+                    this.sendPushMessage(send);
+                }
             } else if (data_android.parts.length > 1) {
                 for (var i = 0; i < data_android.parts.length; i++) {
                     var dat = {};
@@ -186,14 +179,35 @@ function FlamebaseDatabase(database, path) {
                     sen.data = dat;
                     sen.tokens = android_tokens;
                     sen.notification = notification;
-                    this.sendPushMessage(sen);
+                    if (ios_tokens.length === 0 && i === data_android.parts.length - 1) {
+                        this.sendPushMessage(sen, callback);
+                    } else {
+                        this.sendPushMessage(sen);
+                    }
                 }
-            } else if (this.debugVal) {
-                logger.debug("no differences located");
+            } else {
+                var data = {};
+                data.id = id;
+                data.tag = this.pushConfig.tag();
+                data.action = ACTION_NO_UPDATE;
+                var send = {};
+                send.data = data;
+                send.tokens = android_tokens;
+                send.notification = notification;
+                if (ios_tokens.length === 0) {
+                    this.sendPushMessage(send, callback);
+                } else {
+                    this.sendPushMessage(send);
+                }
             }
         }
 
         if (ios_tokens.length > 0) {
+            var data_ios = this.getPartsFor(this.OS.IOS, JSON.parse(this.lastStringReference), this.ref);
+            if (object.debugVal) {
+                logger.debug("ios_tokens_size: " + ios_tokens.length);
+                logger.debug("data_ios_size: " + data_ios.parts.length);
+            }
             if (data_ios.parts.length === 1) {
                 var da = {};
                 da.id = id;
@@ -206,7 +220,7 @@ function FlamebaseDatabase(database, path) {
                 se.data = da;
                 se.tokens = ios_tokens;
                 se.notification = notification;
-                this.sendPushMessage(se);
+                this.sendPushMessage(se, callback);
             } else if (data_ios.parts.length > 1) {
                 for (var i = 0; i < data_ios.parts.length; i++) {
                     var d = {};
@@ -220,16 +234,31 @@ function FlamebaseDatabase(database, path) {
                     s.data = d;
                     s.tokens = ios_tokens;
                     s.notification = notification;
-                    this.sendPushMessage(s);
+                    if (i === data_ios.parts.length - 1) {
+                        this.sendPushMessage(s, callback);
+                    } else {
+                        this.sendPushMessage(s);
+                    }
                 }
-            } else if (this.debugVal) {
-                logger.debug("no differences located");
+            } else {
+                var data = {};
+                data.id = id;
+                data.tag = this.pushConfig.tag();
+                data.action = ACTION_NO_UPDATE;
+                var s = {};
+                s.data = data;
+                s.tokens = ios_tokens;
+                s.notification = notification;
+                this.sendPushMessage(s, callback);
             }
         }
     };
 
-    this.sendDifferencesForClient = function(before, device) {
-
+    this.sendDifferencesForClient = function(before, device, callback) {
+        if (this.fcm === null) {
+            logger.error("# no fcm detected, set an API key")
+            return;
+        }
         var ios_tokens = [];
         var android_tokens = [];
 
@@ -242,19 +271,12 @@ function FlamebaseDatabase(database, path) {
             android_tokens.push(device.token);
         }
 
-        var data_android = this.getPartsFor(this.OS.ANDROID, JSON.parse(before), this.ref);
-        var data_ios = this.getPartsFor(this.OS.IOS, JSON.parse(before), this.ref);
-
-        if (object.debugVal) {
-            logger.debug("android_tokens_size: " + android_tokens.length);
-            logger.debug("ios_tokens_size: " + ios_tokens.length);
-            logger.debug("data_android_size: " + data_android.parts.length);
-            logger.debug("data_ios_size: " + data_ios.parts.length);
-        }
-
-        this.lastStringReference = JSON.stringify(this.ref);
-
         if (android_tokens.length > 0) {
+            var data_android = this.getPartsFor(this.OS.ANDROID, JSON.parse(before), this.ref);
+            if (object.debugVal) {
+                logger.debug("android_tokens_size: " + android_tokens.length);
+                logger.debug("data_android_size: " + data_android.parts.length);
+            }
             if (data_android.parts.length === 1) {
                 var data = {};
                 data.id = id;
@@ -267,7 +289,11 @@ function FlamebaseDatabase(database, path) {
                 send.data = data;
                 send.tokens = android_tokens;
                 send.notification = notification;
-                this.sendPushMessage(send);
+                if (ios_tokens.length === 0) {
+                    this.sendPushMessage(send, callback);
+                } else {
+                    this.sendPushMessage(send);
+                }
             } else if (data_android.parts.length > 1) {
                 for (var i = 0; i < data_android.parts.length; i++) {
                     var dat = {};
@@ -281,7 +307,11 @@ function FlamebaseDatabase(database, path) {
                     sen.data = dat;
                     sen.tokens = android_tokens;
                     sen.notification = notification;
-                    this.sendPushMessage(sen);
+                    if (ios_tokens.length === 0 && i === data_android.parts.length - 1) {
+                        this.sendPushMessage(sen, callback);
+                    } else {
+                        this.sendPushMessage(sen);
+                    }
                 }
             } else {
                 var data = {};
@@ -292,11 +322,20 @@ function FlamebaseDatabase(database, path) {
                 send.data = data;
                 send.tokens = android_tokens;
                 send.notification = notification;
-                this.sendPushMessage(send);
+                if (ios_tokens.length === 0) {
+                    this.sendPushMessage(send, callback);
+                } else {
+                    this.sendPushMessage(send);
+                }
             }
         }
 
         if (ios_tokens.length > 0) {
+            var data_ios = this.getPartsFor(this.OS.IOS, JSON.parse(before), this.ref);
+            if (object.debugVal) {
+                logger.debug("ios_tokens_size: " + ios_tokens.length);
+                logger.debug("data_ios_size: " + data_ios.parts.length);
+            }
             if (data_ios.parts.length === 1) {
                 var da = {};
                 da.id = id;
@@ -309,7 +348,7 @@ function FlamebaseDatabase(database, path) {
                 se.data = da;
                 se.tokens = ios_tokens;
                 se.notification = notification;
-                this.sendPushMessage(se);
+                this.sendPushMessage(se, callback);
             } else if (data_ios.parts.length > 1) {
                 for (var i = 0; i < data_ios.parts.length; i++) {
                     var d = {};
@@ -323,7 +362,11 @@ function FlamebaseDatabase(database, path) {
                     s.data = d;
                     s.tokens = ios_tokens;
                     s.notification = notification;
-                    this.sendPushMessage(s);
+                    if (i === data_ios.parts.length - 1) {
+                        this.sendPushMessage(s, callback);
+                    } else {
+                        this.sendPushMessage(s);
+                    }
                 }
             } else {
                 var data = {};
@@ -334,12 +377,14 @@ function FlamebaseDatabase(database, path) {
                 send.data = data;
                 send.tokens = ios_tokens;
                 send.notification = notification;
-                this.sendPushMessage(send);
+                this.sendPushMessage(send, callback);
             }
         }
+
+        this.lastStringReference = JSON.stringify(this.ref);
     };
 
-    this.sendPushMessage = function(send) {
+    this.sendPushMessage = function(send, callback) {
         this.queue.pushJob(function() {
             return new Promise(function (resolve, reject) {
                 var message = {
@@ -357,6 +402,9 @@ function FlamebaseDatabase(database, path) {
                     .then(function (response) {
                         if (object.debugVal) {
                             logger.debug("Successfully sent with response: " + JSON.stringifyAligned(JSON.parse(response)));
+                        }
+                        if (callback != undefined) {
+                            callback();
                         }
                         resolve();
                     })
@@ -412,44 +460,6 @@ function FlamebaseDatabase(database, path) {
         result.parts = partsToSend;
         return result;
     };
-
-    /*this.createEmptyReferenceForPath = function(e, path) {
-        var aux = null;
-        if (e.toString().indexOf("Can't find dataPath") > -1) {
-
-            var mainRef = object.db.getData("/");
-            var pathParts = path.split("/");
-
-            for (var p = 0; p < pathParts.length; p++) {
-                var pa = pathParts[p];
-
-                if (pa.length === 0) {
-                    continue;
-                }
-
-                if (aux === null) {
-                    if (mainRef[pa] !== undefined) {
-                        aux = mainRef[pa];
-                    } else {
-                        mainRef[pa] = {};
-                        aux = mainRef[pa]
-                    }
-                } else {
-                    if (aux[pa] !== undefined) {
-                        aux = aux[pa];
-                    } else {
-                        aux[pa] = {};
-                        aux = aux[pa]
-                    }
-                }
-            }
-
-            logger.debug("generated: " + JSON.stringifyAligned(mainRef));
-
-            object.ref = mainRef;
-            object.db.push("/", mainRef);
-        }
-    };*/
 
     this.exist = function() {
         return !(this.ref === null || this.ref === undefined)
