@@ -9,6 +9,7 @@ var sha1 =                  require('sha1');
 
 const TAG = "Flamebase Database";
 var logger = log4js.getLogger(TAG);
+logger.level = 'all';
 
 JSON.stringifyAligned = require('json-align');
 
@@ -60,10 +61,26 @@ function FlamebaseDatabase(database, path) {
             }
         } catch(e) {
             console.log("####################### error: " + e);
-            console.log("####################### generating {} ");
-            object.ref = {};
+            console.log("####################### generating tree ");
+            this.prepareUnknownPath();
             this.lastStringReference = JSON.stringify(object.ref);
+            if (this.debugVal) {
+                logger.debug("ref: " + path);
+                logger.debug("len: " + this.lastStringReference.length);
+            }
         }
+    };
+
+    this.prepareUnknownPath = function() {
+        var paths = path.split("/");
+        var currentObject = object.ref;
+        for (p in paths) {
+            var pCheck = paths[p];
+            currentObject[pCheck] = {};
+            currentObject = currentObject[pCheck];
+        }
+        object.ref = currentObject;
+        object.db.push(path, object.ref);
     };
 
     /**
