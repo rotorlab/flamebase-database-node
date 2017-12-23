@@ -426,6 +426,8 @@ function FlamebaseDatabase(database, path) {
                         resolve();
                     })
                     .catch(function (err) {
+                        logger.error("api key: " + object.pushConfig.APIKey());
+                        logger.error("message: " + JSON.stringifyAligned(message));
                         logger.error("error: " + JSON.stringifyAligned(err));
                         resolve();
                     })
