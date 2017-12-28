@@ -2,14 +2,12 @@
 var JsonDB =                require('node-json-db');
 var FCM =                   require('fcm-push');
 var diff =                  require('rus-diff').diff;
-var log4js =                require('log4js');
+const logjs =                 require('logjsx');
 var SN =                    require('sync-node');
 var sha1 =                  require('sha1');
 
 
 const TAG = "Flamebase Database";
-var logger = log4js.getLogger(TAG);
-logger.level = 'all';
 
 JSON.stringifyAligned = require('json-align');
 
@@ -47,6 +45,12 @@ function FlamebaseDatabase(database, path) {
     this.lastStringReference = JSON.stringify({});
     this.pushConfig = null;
     this.fcm = null;
+
+    var logger = new logjs();
+
+    logger.init({
+        level : "DEBUG"
+    });
 
     /**
      * sync from database
@@ -126,8 +130,11 @@ function FlamebaseDatabase(database, path) {
     this.syncNotifications = function(callback) {
         if (this.pushConfig !== null) {
             try {
+                logger.info("------ 33");
+
                 this.sendDetailPushMessage(callback);
             } catch (e) {
+                logger.info("------");
                 logger.error("error: " + e);
             }
         }
@@ -137,17 +144,25 @@ function FlamebaseDatabase(database, path) {
      *
      */
     this.sendDetailPushMessage = function(callback) {
+        logger.info("------ 66");
+
         if (this.fcm === null) {
             logger.error("# no fcm detected, set an API key")
             return;
         }
+        logger.info("------ 77");
 
         var ios_tokens = [];
         var android_tokens = [];
 
         var id = this.pushConfig.referenceId();
+        logger.info("------ 88");
         var notification = this.pushConfig.notification();
+        logger.info("------ 99 + " + id);
+
         var devices = this.pushConfig.devices();
+
+        logger.info("------ 55");
 
         for (var t = 0; t < devices.length; t++) {
             var device = devices[t];
@@ -157,6 +172,7 @@ function FlamebaseDatabase(database, path) {
                 android_tokens.push(device.token);
             }
         }
+        logger.info("------ 44");
 
         this.lastStringReference = JSON.stringify(this.ref);
 
@@ -407,7 +423,8 @@ function FlamebaseDatabase(database, path) {
                 var message = {
                     registration_ids: send.tokens, // required fill with device token or topics
                     data: send.data,
-                    notification: send.notification
+                    collapse_key: 'test',
+                    notification: send.notification === null ? {} : send.notification
                 };
 
 
@@ -420,13 +437,13 @@ function FlamebaseDatabase(database, path) {
                         if (object.debugVal) {
                             logger.debug("Successfully sent with response: " + JSON.stringifyAligned(JSON.parse(response)));
                         }
-                        if (callback != undefined) {
+                        if (callback !== undefined) {
                             callback();
                         }
                         resolve();
                     })
                     .catch(function (err) {
-                        logger.error("api key: " + object.pushConfig.APIKey());
+                        logger.info("api key: " + object.pushConfig.APIKey());
                         logger.error("message: " + JSON.stringifyAligned(message));
                         logger.error("error: " + JSON.stringifyAligned(err));
                         resolve();
